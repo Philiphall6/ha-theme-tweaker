@@ -39,6 +39,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     if (nextTheme !== this._themeName) {
       this._themeName = nextTheme;
       this._updateThemeLabel();
+      this._syncControls();
     }
     this._loadSettings();
   }
@@ -73,6 +74,24 @@ class HaThemeTweakerPanel extends HTMLElement {
       this._hass?.selectedTheme ||
       "theme"
     );
+  }
+
+  _readCssVariable(name) {
+    if (!name) {
+      return "";
+    }
+
+    for (const root of [document.documentElement, document.body, this]) {
+      if (!root) {
+        continue;
+      }
+      const value = getComputedStyle(root).getPropertyValue(name).trim();
+      if (value) {
+        return value;
+      }
+    }
+
+    return "";
   }
 
   async _loadSettings() {
@@ -265,7 +284,9 @@ class HaThemeTweakerPanel extends HTMLElement {
   }
 
   _syncControl(key) {
+    const setting = SETTING_DEFINITIONS.get(key);
     const value = normalizedInputValue(this._draft[key]);
+    const inheritedValue = this._readCssVariable(setting?.cssVariable);
     const row = this.shadowRoot.querySelector(`[data-row="${key}"]`);
     if (!row) {
       return;
@@ -277,9 +298,10 @@ class HaThemeTweakerPanel extends HTMLElement {
 
     if (textInput) {
       textInput.value = value;
+      textInput.placeholder = inheritedValue || setting?.placeholder || "";
     }
     if (colorInput) {
-      colorInput.value = colorToHex(value);
+      colorInput.value = colorToHex(value || inheritedValue);
     }
     if (select) {
       select.value = value;
@@ -288,12 +310,14 @@ class HaThemeTweakerPanel extends HTMLElement {
 
   _renderField(setting) {
     const value = normalizedInputValue(this._draft[setting.key]);
-    const placeholder = escapeHtml(setting.placeholder ?? "");
+    const inheritedValue = this._readCssVariable(setting.cssVariable);
+    const placeholder = escapeHtml(inheritedValue || setting.placeholder || "");
+    const swatchValue = value || inheritedValue;
 
     if (setting.type === "color") {
       return `
         <div class="field color-field">
-          <input data-role="color" data-key="${setting.key}" type="color" value="${colorToHex(value)}" aria-label="${escapeHtml(setting.label)}">
+          <input data-role="color" data-key="${setting.key}" type="color" value="${colorToHex(swatchValue)}" aria-label="${escapeHtml(setting.label)}">
           <input data-role="value" data-key="${setting.key}" type="text" value="${escapeHtml(value)}" placeholder="${placeholder}" spellcheck="false">
         </div>
       `;
