@@ -65,6 +65,7 @@ ha-theme-tweaker/
 ├── README.md
 ├── LICENSE
 ├── hacs.json
+├── info.md
 ├── package.json
 ├── .github/
 │   └── workflows/
