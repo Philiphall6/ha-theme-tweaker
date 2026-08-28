@@ -81,7 +81,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     }
 
     this._loading = true;
-    this._setStatus("Chargement...", "neutral");
+    this._setStatus("Loading...", "neutral");
     try {
       const response = await this._hass.connection.sendMessagePromise({
         type: WS_TYPES.getSettings,
@@ -93,10 +93,10 @@ class HaThemeTweakerPanel extends HTMLElement {
         applyThemeTweakerStyles(this._draft);
       }
       this._loaded = true;
-      this._setStatus("Prêt", "success");
+      this._setStatus("Ready", "success");
       this._render();
     } catch (err) {
-      this._setStatus(`Erreur: ${err.message ?? err}`, "error");
+      this._setStatus(`Error: ${err.message ?? err}`, "error");
     } finally {
       this._loading = false;
     }
@@ -127,7 +127,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     }
     if (trimmed.length > 180 || UNSAFE_CSS_VALUE.test(trimmed)) {
       this._invalidKeys.add(key);
-      return "Valeur CSS non prise en charge";
+      return "Unsupported CSS value";
     }
     this._invalidKeys.delete(key);
     return null;
@@ -162,16 +162,16 @@ class HaThemeTweakerPanel extends HTMLElement {
 
   async _save() {
     if (this._invalidKeys.size > 0) {
-      this._setStatus("Corrige les valeurs invalides avant sauvegarde.", "error");
+      this._setStatus("Fix invalid values before saving.", "error");
       return;
     }
 
     if (!this._hass?.connection) {
-      this._setStatus("Connexion Home Assistant indisponible.", "error");
+      this._setStatus("Home Assistant connection unavailable.", "error");
       return;
     }
 
-    this._setStatus("Sauvegarde...", "neutral");
+    this._setStatus("Saving...", "neutral");
     try {
       const response = await this._hass.connection.sendMessagePromise({
         type: WS_TYPES.saveSettings,
@@ -181,25 +181,25 @@ class HaThemeTweakerPanel extends HTMLElement {
       this._saved = cloneSettings(settings);
       this._draft = cloneSettings(settings);
       applyThemeTweakerStyles(this._draft);
-      this._setStatus("Sauvegardé", "success");
+      this._setStatus("Saved", "success");
       this._syncControls();
       this._updateDirtyState();
     } catch (err) {
-      this._setStatus(`Erreur: ${err.message ?? err}`, "error");
+      this._setStatus(`Error: ${err.message ?? err}`, "error");
     }
   }
 
   async _resetAll() {
-    if (!window.confirm("Réinitialiser toutes les surcharges ?")) {
+    if (!window.confirm("Reset all overrides?")) {
       return;
     }
 
     if (!this._hass?.connection) {
-      this._setStatus("Connexion Home Assistant indisponible.", "error");
+      this._setStatus("Home Assistant connection unavailable.", "error");
       return;
     }
 
-    this._setStatus("Réinitialisation...", "neutral");
+    this._setStatus("Resetting...", "neutral");
     try {
       const response = await this._hass.connection.sendMessagePromise({
         type: WS_TYPES.resetAll,
@@ -209,10 +209,10 @@ class HaThemeTweakerPanel extends HTMLElement {
       this._draft = cloneSettings(settings);
       this._invalidKeys.clear();
       applyThemeTweakerStyles(this._draft);
-      this._setStatus("Réinitialisé", "success");
+      this._setStatus("Reset", "success");
       this._render();
     } catch (err) {
-      this._setStatus(`Erreur: ${err.message ?? err}`, "error");
+      this._setStatus(`Error: ${err.message ?? err}`, "error");
     }
   }
 
@@ -240,7 +240,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     }
     const dirtyLabel = this.shadowRoot.querySelector(".dirty-label");
     if (dirtyLabel) {
-      dirtyLabel.textContent = dirty ? "Modifié" : "À jour";
+      dirtyLabel.textContent = dirty ? "Modified" : "Up to date";
       dirtyLabel.dataset.dirty = dirty ? "true" : "false";
     }
   }
@@ -302,7 +302,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     if (setting.type === "fontWeight") {
       return `
         <select data-role="select" data-key="${setting.key}" aria-label="${escapeHtml(setting.label)}">
-          <option value="">Thème</option>
+          <option value="">Theme</option>
           <option value="300">300</option>
           <option value="400">400</option>
           <option value="500">500</option>
@@ -330,7 +330,7 @@ class HaThemeTweakerPanel extends HTMLElement {
           </div>
           <div class="setting-control">
             ${this._renderField(setting)}
-            <button class="icon-button" data-action="reset-one" data-key="${setting.key}" title="Réinitialiser" aria-label="Réinitialiser ${escapeHtml(setting.label)}">
+            <button class="icon-button" data-action="reset-one" data-key="${setting.key}" title="Reset" aria-label="Reset ${escapeHtml(setting.label)}">
               <ha-icon icon="mdi:backup-restore"></ha-icon>
             </button>
           </div>
@@ -356,7 +356,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     return `
       <div class="preview-toolbar">
         <ha-icon icon="mdi:menu"></ha-icon>
-        <span>Maison</span>
+        <span>Home</span>
         <ha-icon icon="mdi:dots-vertical"></ha-icon>
       </div>
       <div class="preview-grid">
@@ -367,7 +367,7 @@ class HaThemeTweakerPanel extends HTMLElement {
           </div>
           <div class="preview-menu-item">
             <ha-icon icon="mdi:cog"></ha-icon>
-            <span>Paramètres</span>
+            <span>Settings</span>
             <span class="preview-badge">3</span>
           </div>
           <div class="preview-menu-item">
@@ -380,18 +380,18 @@ class HaThemeTweakerPanel extends HTMLElement {
           <div class="preview-card">
             <div class="preview-card-title">
               <ha-icon icon="mdi:home-thermometer"></ha-icon>
-              <span>Salon</span>
+              <span>Living room</span>
             </div>
             <strong>21.4 °C</strong>
-            <small>Humidité 45 %</small>
+            <small>Humidity 45 %</small>
           </div>
           <div class="preview-card mushroom">
             <div class="mushroom-shape">
               <ha-icon icon="mdi:lightbulb-on"></ha-icon>
             </div>
             <div>
-              <strong>Lumière</strong>
-              <small>Allumée</small>
+              <strong>Light</strong>
+              <small>On</small>
             </div>
           </div>
         </div>
@@ -916,24 +916,24 @@ class HaThemeTweakerPanel extends HTMLElement {
                 <ha-icon icon="mdi:theme-light-dark"></ha-icon>
                 <span class="theme-name">${escapeHtml(this._themeName)}</span>
               </span>
-              <span class="dirty-label" data-dirty="${this._isDirty() ? "true" : "false"}">${this._isDirty() ? "Modifié" : "À jour"}</span>
+              <span class="dirty-label" data-dirty="${this._isDirty() ? "true" : "false"}">${this._isDirty() ? "Modified" : "Up to date"}</span>
               <span class="status" data-kind="${this._statusKind}">${escapeHtml(this._status)}</span>
             </div>
           </div>
           <div class="actions">
             <button class="action-button" data-action="reset-all">
               <ha-icon icon="mdi:restore"></ha-icon>
-              <span>Tout réinitialiser</span>
+              <span>Reset all</span>
             </button>
             <button class="action-button primary" data-action="save" ${this._isDirty() ? "" : "disabled"}>
               <ha-icon icon="mdi:content-save"></ha-icon>
-              <span>Sauvegarder</span>
+              <span>Save</span>
             </button>
           </div>
         </div>
 
         <div class="layout">
-          <nav class="nav" aria-label="Catégories">
+          <nav class="nav" aria-label="Categories">
             ${this._renderNav()}
           </nav>
 
@@ -949,7 +949,7 @@ class HaThemeTweakerPanel extends HTMLElement {
 
           <aside class="preview">
             <div class="preview-head">
-              <h2>Aperçu</h2>
+              <h2>Preview</h2>
               <ha-icon icon="mdi:eye-outline"></ha-icon>
             </div>
             <div class="preview-body">
