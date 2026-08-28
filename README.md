@@ -34,12 +34,12 @@ The panel provides these categories:
 
 - `Sidebar / Menu`: background, icons, text, selected item, hover state
 - `Badges`: background, text, border, radius, font size, font weight, minimum width, height
-- `General Colors`: common Home Assistant variables such as `primary-color`, `accent-color`, and `card-background-color`
+- `General Colors`: common Home Assistant theme output variables such as `--accent-color`, `--text-accent-color`, and `--card-background-color`
 - `Cards`: background, border, radius, shadow, text, icons
 - `Mushroom`: optional variables, with no Mushroom Cards dependency required
 - `Header / Toolbar`: background, text, icons, accent
 
-Every empty value is saved as `null`, which means Home Assistant keeps inheriting the value from the active theme.
+Every empty value is saved as `null`, which means Home Assistant keeps inheriting the value from the active theme. Color pickers for mapped Home Assistant variables can show the inherited theme value as a starting point; once you save an override, more specific sections such as Sidebar, Cards, Mushroom, and Header remain applied on top.
 
 ## Live Preview And Saving
 
@@ -105,6 +105,8 @@ Data is stored like this:
 ```json
 {
   "settings": {
+    "accent_color": "#03a9f4",
+    "text_accent_color": "#ffffff",
     "sidebar_badge_background": "#ff3b30",
     "sidebar_badge_text": "#ffffff",
     "card_radius": "16px",
