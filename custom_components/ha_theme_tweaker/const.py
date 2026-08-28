@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "ha_theme_tweaker"
 NAME = "HA Theme Tweaker"
-VERSION = "1.0.0"
+VERSION = "1.0.2"
 
 PANEL_URL = "ha-theme-tweaker"
 PANEL_ELEMENT = "ha-theme-tweaker-panel"
@@ -15,12 +15,13 @@ STATIC_URL = f"/{DOMAIN}_static"
 
 STORAGE_KEY = DOMAIN
 STORAGE_VERSION = 1
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 SIGNAL_SETTINGS_UPDATED = f"{DOMAIN}_settings_updated"
 EVENT_SETTINGS_UPDATED = f"{DOMAIN}_settings_updated"
 
 DEFAULT_SETTINGS: dict[str, str | None] = {
+    "target_device": None,
     "sidebar_background": None,
     "sidebar_icon_color": None,
     "sidebar_text_color": None,

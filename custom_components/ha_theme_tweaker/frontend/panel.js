@@ -3,11 +3,13 @@ import {
   SETTING_DEFINITIONS,
   SETTING_GROUPS,
   WS_TYPES,
-  sanitizeCssValue,
+  normalizeSettingValue,
 } from "./styles.js";
 import {
   cloneSettings,
+  colorToAlpha,
   colorToHex,
+  colorWithAlpha,
   escapeHtml,
   extractSettings,
   normalizedInputValue,
@@ -24,6 +26,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     this._loaded = false;
     this._loading = false;
     this._activeGroup = "sidebar";
+    this._focusedKey = "";
     this._saved = cloneSettings();
     this._draft = cloneSettings();
     this._invalidKeys = new Set();
@@ -139,10 +142,19 @@ class HaThemeTweakerPanel extends HTMLElement {
   }
 
   _validateValue(key, value) {
+    const setting = SETTING_DEFINITIONS.get(key);
     const trimmed = String(value ?? "").trim();
     if (!trimmed) {
       this._invalidKeys.delete(key);
       return null;
+    }
+    if (
+      setting?.type === "deviceScope" &&
+      trimmed !== "desktop" &&
+      trimmed !== "mobile"
+    ) {
+      this._invalidKeys.add(key);
+      return "Unsupported device scope";
     }
     if (trimmed.length > 180 || UNSAFE_CSS_VALUE.test(trimmed)) {
       this._invalidKeys.add(key);
@@ -160,8 +172,9 @@ class HaThemeTweakerPanel extends HTMLElement {
       return;
     }
 
-    this._draft[key] = sanitizeCssValue(value);
+    this._draft[key] = normalizeSettingValue(key, value);
     applyThemeTweakerStyles(this._draft);
+    this._updatePreviewScope();
     window.dispatchEvent(
       new CustomEvent("ha-theme-tweaker-preview", {
         detail: { settings: this._draft },
@@ -176,6 +189,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     this._syncControl(key);
     this._setRowError(key, null);
     applyThemeTweakerStyles(this._draft);
+    this._updatePreviewScope();
     this._updateDirtyState();
   }
 
@@ -294,6 +308,8 @@ class HaThemeTweakerPanel extends HTMLElement {
 
     const textInput = row.querySelector("[data-role='value']");
     const colorInput = row.querySelector("[data-role='color']");
+    const alphaInput = row.querySelector("[data-role='alpha']");
+    const alphaValue = row.querySelector("[data-role='alpha-value']");
     const select = row.querySelector("[data-role='select']");
 
     if (textInput) {
@@ -302,6 +318,12 @@ class HaThemeTweakerPanel extends HTMLElement {
     }
     if (colorInput) {
       colorInput.value = colorToHex(value || inheritedValue);
+    }
+    if (alphaInput) {
+      alphaInput.value = String(colorToAlpha(value || inheritedValue));
+    }
+    if (alphaValue) {
+      alphaValue.textContent = `${colorToAlpha(value || inheritedValue)}%`;
     }
     if (select) {
       select.value = value;
@@ -314,11 +336,29 @@ class HaThemeTweakerPanel extends HTMLElement {
     const placeholder = escapeHtml(inheritedValue || setting.placeholder || "");
     const swatchValue = value || inheritedValue;
 
-    if (setting.type === "color") {
+    if (setting.type === "deviceScope") {
       return `
-        <div class="field color-field">
-          <input data-role="color" data-key="${setting.key}" type="color" value="${colorToHex(swatchValue)}" aria-label="${escapeHtml(setting.label)}">
-          <input data-role="value" data-key="${setting.key}" type="text" value="${escapeHtml(value)}" placeholder="${placeholder}" spellcheck="false">
+        <select data-role="select" data-key="${setting.key}" aria-label="${escapeHtml(setting.label)}">
+          <option value="">Both</option>
+          <option value="desktop">Web</option>
+          <option value="mobile">Mobile</option>
+        </select>
+      `;
+    }
+
+    if (setting.type === "color") {
+      const alphaValue = colorToAlpha(swatchValue);
+      return `
+        <div class="color-control">
+          <div class="field color-field">
+            <input data-role="color" data-key="${setting.key}" type="color" value="${colorToHex(swatchValue)}" aria-label="${escapeHtml(setting.label)}">
+            <input data-role="value" data-key="${setting.key}" type="text" value="${escapeHtml(value)}" placeholder="${placeholder}" spellcheck="false">
+          </div>
+          <div class="alpha-field">
+            <ha-icon icon="mdi:opacity"></ha-icon>
+            <input data-role="alpha" data-key="${setting.key}" type="range" min="0" max="100" step="1" value="${alphaValue}" aria-label="Opacity for ${escapeHtml(setting.label)}">
+            <output data-role="alpha-value" data-key="${setting.key}">${alphaValue}%</output>
+          </div>
         </div>
       `;
     }
@@ -347,7 +387,7 @@ class HaThemeTweakerPanel extends HTMLElement {
     return group.settings
       .map(
         (setting) => `
-        <div class="setting-row" data-row="${setting.key}">
+        <div class="setting-row ${this._focusedKey === setting.key ? "focused" : ""}" data-row="${setting.key}">
           <div class="setting-label">
             <label>${escapeHtml(setting.label)}</label>
             <span>${escapeHtml(setting.key)}</span>
@@ -376,51 +416,179 @@ class HaThemeTweakerPanel extends HTMLElement {
     ).join("");
   }
 
+  _previewAttrs(group, key, label, extraClass = "") {
+    const active = this._focusedKey === key || (!this._focusedKey && this._activeGroup === group);
+    return `type="button" class="preview-hotspot ${extraClass} ${active ? "active" : ""}" data-preview-group="${group}" data-preview-key="${key}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"`;
+  }
+
+  _scopeClass() {
+    const scope = this._draft.target_device;
+    if (scope === "mobile") {
+      return "scope-mobile";
+    }
+    if (scope === "desktop") {
+      return "scope-desktop";
+    }
+    return "scope-both";
+  }
+
   _renderPreview() {
     return `
-      <div class="preview-toolbar">
-        <ha-icon icon="mdi:menu"></ha-icon>
-        <span>Home</span>
-        <ha-icon icon="mdi:dots-vertical"></ha-icon>
-      </div>
-      <div class="preview-grid">
-        <div class="preview-sidebar">
-          <div class="preview-menu-item selected">
-            <ha-icon icon="mdi:view-dashboard"></ha-icon>
-            <span>Overview</span>
-          </div>
-          <div class="preview-menu-item">
-            <ha-icon icon="mdi:cog"></ha-icon>
-            <span>Settings</span>
-            <span class="preview-badge">3</span>
-          </div>
-          <div class="preview-menu-item">
-            <ha-icon icon="mdi:bell"></ha-icon>
-            <span>Notifications</span>
-            <span class="preview-badge">8</span>
-          </div>
-        </div>
-        <div class="preview-content">
-          <div class="preview-card">
-            <div class="preview-card-title">
-              <ha-icon icon="mdi:home-thermometer"></ha-icon>
-              <span>Living room</span>
-            </div>
-            <strong>21.4 °C</strong>
-            <small>Humidity 45 %</small>
-          </div>
-          <div class="preview-card mushroom">
-            <div class="mushroom-shape">
-              <ha-icon icon="mdi:lightbulb-on"></ha-icon>
-            </div>
-            <div>
-              <strong>Light</strong>
-              <small>On</small>
-            </div>
-          </div>
+      <div class="preview-frame ${this._scopeClass()}">
+        <button ${this._previewAttrs("header", "header_background", "Header background", "preview-toolbar")}>
+          <ha-icon icon="mdi:menu"></ha-icon>
+          <span>Home</span>
+          <ha-icon icon="mdi:dots-vertical"></ha-icon>
+        </button>
+        <div class="preview-grid">
+          <button ${this._previewAttrs("sidebar", "sidebar_background", "Sidebar background", "preview-sidebar")}>
+            <span class="preview-sidebar-title">Home Assistant</span>
+            <span class="preview-menu-item selected preview-hotspot" data-preview-group="sidebar" data-preview-key="sidebar_selected_color" title="Selected sidebar item" aria-label="Selected sidebar item">
+              <ha-icon icon="mdi:view-dashboard"></ha-icon>
+              <span>Overview</span>
+            </span>
+            <span class="preview-menu-item preview-hotspot" data-preview-group="sidebar" data-preview-key="sidebar_icon_color" title="Sidebar icons" aria-label="Sidebar icons">
+              <ha-icon icon="mdi:cog"></ha-icon>
+              <span>Settings</span>
+              <span class="preview-badge preview-hotspot" data-preview-group="badges" data-preview-key="sidebar_badge_background" title="Sidebar badge" aria-label="Sidebar badge">3</span>
+            </span>
+            <span class="preview-menu-item preview-hotspot" data-preview-group="sidebar" data-preview-key="sidebar_text_color" title="Sidebar text" aria-label="Sidebar text">
+              <ha-icon icon="mdi:bell"></ha-icon>
+              <span>Notifications</span>
+              <span class="preview-badge preview-hotspot" data-preview-group="badges" data-preview-key="sidebar_badge_background" title="Sidebar badge" aria-label="Sidebar badge">8</span>
+            </span>
+          </button>
+          <button ${this._previewAttrs("general", "primary_background_color", "Page background", "preview-content")}>
+            <span class="preview-view-tabs">
+              <span class="preview-tab active preview-hotspot" data-preview-group="general" data-preview-key="accent_color" title="Accent color" aria-label="Accent color">Home</span>
+              <span class="preview-tab">Energy</span>
+              <span class="preview-tab">Security</span>
+            </span>
+            <span class="preview-dashboard-grid">
+              <span class="preview-room">
+                <span class="preview-room-title">Living room</span>
+                <span class="preview-card-row">
+                  <span class="preview-card climate preview-hotspot" data-preview-group="cards" data-preview-key="card_background" title="Card background" aria-label="Card background">
+                    <span class="preview-card-title">
+                      <ha-icon class="preview-hotspot" icon="mdi:home-thermometer" data-preview-group="cards" data-preview-key="card_icon_color" title="Card icons" aria-label="Card icons"></ha-icon>
+                      <span>Climate</span>
+                    </span>
+                    <strong>21.4 °C</strong>
+                    <small>Humidity 45 %</small>
+                  </span>
+                  <span class="preview-card mushroom preview-hotspot" data-preview-group="mushroom" data-preview-key="mushroom_card_radius" title="Mushroom card" aria-label="Mushroom card">
+                    <span class="mushroom-shape preview-hotspot" data-preview-group="mushroom" data-preview-key="mushroom_shape_color" title="Mushroom shape" aria-label="Mushroom shape">
+                      <ha-icon icon="mdi:lightbulb-on"></ha-icon>
+                    </span>
+                    <span>
+                      <strong>Light</strong>
+                      <small>On</small>
+                    </span>
+                  </span>
+                </span>
+              </span>
+              <span class="preview-room compact">
+                <span class="preview-room-title">Kitchen</span>
+                <span class="preview-card-row">
+                  <span class="preview-card sensor preview-hotspot" data-preview-group="cards" data-preview-key="card_text_color" title="Card text" aria-label="Card text">
+                    <span class="preview-card-title">
+                      <ha-icon icon="mdi:water-percent"></ha-icon>
+                      <span>Humidity</span>
+                    </span>
+                    <strong>42 %</strong>
+                  </span>
+                  <span class="preview-card sensor preview-hotspot" data-preview-group="cards" data-preview-key="card_border" title="Card border" aria-label="Card border">
+                    <span class="preview-card-title">
+                      <ha-icon icon="mdi:power-plug"></ha-icon>
+                      <span>Energy</span>
+                    </span>
+                    <strong>1.2 kW</strong>
+                  </span>
+                </span>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
     `;
+  }
+
+  _activateSetting(group, key) {
+    if (!group) {
+      return;
+    }
+
+    this._activeGroup = group;
+    this._focusedKey = key ?? "";
+    this._render();
+
+    window.requestAnimationFrame(() => {
+      const row = this.shadowRoot.querySelector(`[data-row="${this._focusedKey}"]`);
+      row?.scrollIntoView({ block: "center", behavior: "smooth" });
+      row
+        ?.querySelector("[data-role='value'], [data-role='select']")
+        ?.focus({ preventScroll: true });
+    });
+  }
+
+  _queryDeep(selector, root = document, matches = []) {
+    if (!root.querySelectorAll) {
+      return matches;
+    }
+
+    matches.push(...root.querySelectorAll(selector));
+    for (const element of root.querySelectorAll("*")) {
+      if (element.shadowRoot) {
+        this._queryDeep(selector, element.shadowRoot, matches);
+      }
+    }
+
+    return matches;
+  }
+
+  _openHomeAssistantMenu() {
+    const event = new CustomEvent("hass-toggle-menu", {
+      bubbles: true,
+      composed: true,
+    });
+
+    this.dispatchEvent(event);
+    document.dispatchEvent(new CustomEvent("hass-toggle-menu"));
+    window.dispatchEvent(new CustomEvent("hass-toggle-menu"));
+
+    for (const drawer of this._queryDeep("ha-drawer, app-drawer, mwc-drawer")) {
+      if ("open" in drawer) {
+        drawer.open = true;
+      }
+      if ("opened" in drawer) {
+        drawer.opened = true;
+      }
+      drawer.setAttribute("open", "");
+    }
+  }
+
+  _updatePreviewFocus() {
+    for (const element of this.shadowRoot.querySelectorAll("[data-preview-group]")) {
+      const broadHotspot =
+        element.classList.contains("preview-toolbar") ||
+        element.classList.contains("preview-sidebar") ||
+        element.classList.contains("preview-content");
+      const active = this._focusedKey
+        ? element.dataset.previewKey === this._focusedKey
+        : broadHotspot && element.dataset.previewGroup === this._activeGroup;
+      element.classList.toggle("active", active);
+    }
+  }
+
+  _updatePreviewScope() {
+    const frame = this.shadowRoot.querySelector(".preview-frame");
+    if (!frame) {
+      return;
+    }
+
+    frame.classList.toggle("scope-mobile", this._draft.target_device === "mobile");
+    frame.classList.toggle("scope-desktop", this._draft.target_device === "desktop");
+    frame.classList.toggle("scope-both", !this._draft.target_device);
   }
 
   _render() {
@@ -459,8 +627,20 @@ class HaThemeTweakerPanel extends HTMLElement {
           min-width: 0;
         }
 
+        .title-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .menu-button {
+          display: none;
+        }
+
         h1 {
           margin: 0;
+          min-width: 0;
           font-size: 24px;
           line-height: 1.2;
           font-weight: 500;
@@ -634,6 +814,11 @@ class HaThemeTweakerPanel extends HTMLElement {
           border-bottom: 1px solid var(--divider-color);
         }
 
+        .setting-row.focused {
+          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+          box-shadow: inset 3px 0 0 var(--primary-color);
+        }
+
         .setting-row:last-child {
           border-bottom: 0;
         }
@@ -667,11 +852,43 @@ class HaThemeTweakerPanel extends HTMLElement {
           gap: 8px;
         }
 
+        .color-control {
+          display: grid;
+          flex: 1;
+          gap: 8px;
+          min-width: 0;
+        }
+
         .field {
           display: flex;
           min-width: 0;
           flex: 1;
           gap: 8px;
+        }
+
+        .alpha-field {
+          display: grid;
+          grid-template-columns: 24px minmax(120px, 1fr) 46px;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          color: var(--secondary-text-color);
+        }
+
+        .alpha-field ha-icon {
+          color: var(--secondary-text-color);
+        }
+
+        input[type="range"] {
+          width: 100%;
+          min-width: 0;
+          accent-color: var(--primary-color);
+        }
+
+        output {
+          text-align: right;
+          font-size: 12px;
+          color: var(--secondary-text-color);
         }
 
         input[type="color"] {
@@ -698,6 +915,7 @@ class HaThemeTweakerPanel extends HTMLElement {
         }
 
         input[type="text"]:focus,
+        input[type="range"]:focus,
         select:focus {
           border-color: var(--primary-color);
           box-shadow: 0 0 0 1px var(--primary-color);
@@ -722,7 +940,51 @@ class HaThemeTweakerPanel extends HTMLElement {
         }
 
         .preview-body {
-          padding: 16px;
+          padding: 14px;
+        }
+
+        .preview-frame {
+          overflow: hidden;
+          border: 1px solid var(--divider-color);
+          border-radius: 8px;
+          background: var(--primary-background-color);
+        }
+
+        .preview-frame.scope-mobile {
+          max-width: 310px;
+          margin: 0 auto;
+          border-radius: 24px;
+          box-shadow: var(--ha-card-box-shadow, 0 12px 32px rgba(0, 0, 0, 0.24));
+        }
+
+        .preview-hotspot {
+          position: relative;
+          cursor: pointer;
+          transition:
+            outline-color 140ms ease,
+            box-shadow 140ms ease,
+            transform 140ms ease;
+        }
+
+        button.preview-hotspot {
+          width: 100%;
+          color: inherit;
+          text-align: left;
+          background: transparent;
+          border: 0;
+        }
+
+        .preview-hotspot:hover,
+        .preview-hotspot:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--primary-color) 70%, transparent);
+          outline-offset: -2px;
+        }
+
+        .preview-hotspot.active {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -2px;
+          box-shadow: inset 0 0 0 1px var(--primary-color);
+          z-index: 1;
         }
 
         .preview-toolbar {
@@ -738,17 +1000,27 @@ class HaThemeTweakerPanel extends HTMLElement {
 
         .preview-grid {
           display: grid;
-          grid-template-columns: 148px 1fr;
-          min-height: 260px;
-          border: 1px solid var(--divider-color);
-          border-top: 0;
+          grid-template-columns: 150px minmax(0, 1fr);
+          min-height: 320px;
         }
 
         .preview-sidebar {
-          padding: 10px 8px;
-          background: var(--sidebar-background-color, var(--card-background-color));
-          color: var(--sidebar-text-color, var(--primary-text-color));
+          display: grid;
+          align-content: start;
+          gap: 6px;
+          padding: 12px 8px;
+          background: var(--ha-theme-tweaker-sidebar-background, var(--sidebar-background-color, var(--card-background-color)));
+          color: var(--ha-theme-tweaker-sidebar-text-color, var(--sidebar-text-color, var(--primary-text-color)));
           border-right: 1px solid var(--divider-color);
+        }
+
+        .preview-sidebar-title {
+          min-height: 28px;
+          padding: 0 8px;
+          display: flex;
+          align-items: center;
+          font-size: 13px;
+          font-weight: 600;
         }
 
         .preview-menu-item {
@@ -759,16 +1031,16 @@ class HaThemeTweakerPanel extends HTMLElement {
           gap: 8px;
           padding: 0 8px;
           border-radius: 8px;
-          color: var(--sidebar-text-color, var(--primary-text-color));
+          color: var(--ha-theme-tweaker-sidebar-text-color, var(--sidebar-text-color, var(--primary-text-color)));
         }
 
         .preview-menu-item ha-icon {
-          color: var(--sidebar-icon-color, currentColor);
+          color: var(--ha-theme-tweaker-sidebar-icon-color, var(--sidebar-icon-color, currentColor));
         }
 
         .preview-menu-item.selected {
-          color: var(--sidebar-selected-icon-color, var(--primary-color));
-          background: color-mix(in srgb, var(--sidebar-selected-icon-color, var(--primary-color)) 14%, transparent);
+          color: var(--ha-theme-tweaker-sidebar-selected-color, var(--sidebar-selected-icon-color, var(--primary-color)));
+          background: color-mix(in srgb, var(--ha-theme-tweaker-sidebar-selected-color, var(--primary-color)) 16%, transparent);
         }
 
         .preview-menu-item span:nth-child(2) {
@@ -801,6 +1073,45 @@ class HaThemeTweakerPanel extends HTMLElement {
           background: var(--primary-background-color);
         }
 
+        .preview-view-tabs {
+          display: flex;
+          gap: 8px;
+          overflow: hidden;
+        }
+
+        .preview-tab {
+          min-height: 30px;
+          padding: 0 10px;
+          display: inline-flex;
+          align-items: center;
+          color: var(--secondary-text-color);
+          border-radius: 8px;
+          white-space: nowrap;
+        }
+
+        .preview-tab.active {
+          color: var(--text-accent-color, var(--text-primary-color, #fff));
+          background: var(--accent-color);
+        }
+
+        .preview-dashboard-grid,
+        .preview-room,
+        .preview-card-row {
+          display: grid;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .preview-room-title {
+          color: var(--primary-text-color);
+          font-size: 15px;
+          font-weight: 600;
+        }
+
+        .preview-card-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .preview-card {
           min-height: 104px;
           padding: 14px;
@@ -817,6 +1128,7 @@ class HaThemeTweakerPanel extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 8px;
+          min-width: 0;
         }
 
         .preview-card ha-icon {
@@ -829,7 +1141,12 @@ class HaThemeTweakerPanel extends HTMLElement {
         }
 
         .preview-card small {
+          display: block;
           color: var(--secondary-text-color);
+        }
+
+        .preview-card.sensor {
+          min-height: 86px;
         }
 
         .preview-card.mushroom {
@@ -851,6 +1168,23 @@ class HaThemeTweakerPanel extends HTMLElement {
 
         .mushroom-shape ha-icon {
           color: var(--ha-theme-tweaker-mushroom-icon-color, var(--primary-color));
+        }
+
+        .preview-frame.scope-mobile .preview-grid {
+          grid-template-columns: 1fr;
+          min-height: 420px;
+        }
+
+        .preview-frame.scope-mobile .preview-sidebar {
+          display: none;
+        }
+
+        .preview-frame.scope-mobile .preview-content {
+          min-height: 420px;
+        }
+
+        .preview-frame.scope-mobile .preview-card-row {
+          grid-template-columns: 1fr;
         }
 
         .status {
@@ -881,6 +1215,10 @@ class HaThemeTweakerPanel extends HTMLElement {
         @media (max-width: 760px) {
           .shell {
             padding: 12px;
+          }
+
+          .menu-button {
+            display: inline-flex;
           }
 
           .topbar,
@@ -916,6 +1254,19 @@ class HaThemeTweakerPanel extends HTMLElement {
             gap: 8px;
           }
 
+          .setting-control {
+            align-items: stretch;
+          }
+
+          .field,
+          .setting-control {
+            min-width: 0;
+          }
+
+          .alpha-field {
+            grid-template-columns: 24px minmax(80px, 1fr) 42px;
+          }
+
           .row-error {
             grid-column: 1;
           }
@@ -934,7 +1285,12 @@ class HaThemeTweakerPanel extends HTMLElement {
       <div class="shell">
         <div class="topbar">
           <div class="title">
-            <h1>HA Theme Tweaker</h1>
+            <div class="title-row">
+              <button class="icon-button menu-button" data-action="open-menu" title="Open menu" aria-label="Open Home Assistant menu">
+                <ha-icon icon="mdi:menu"></ha-icon>
+              </button>
+              <h1>HA Theme Tweaker</h1>
+            </div>
             <div class="meta">
               <span class="pill">
                 <ha-icon icon="mdi:theme-light-dark"></ha-icon>
@@ -985,12 +1341,14 @@ class HaThemeTweakerPanel extends HTMLElement {
     `;
     this._attachEvents();
     this._syncControls();
+    this._updatePreviewFocus();
   }
 
   _attachEvents() {
     for (const button of this.shadowRoot.querySelectorAll("[data-group]")) {
       button.addEventListener("click", () => {
         this._activeGroup = button.dataset.group;
+        this._focusedKey = "";
         this._render();
       });
     }
@@ -1001,8 +1359,20 @@ class HaThemeTweakerPanel extends HTMLElement {
         const color = this.shadowRoot.querySelector(
           `[data-role='color'][data-key="${key}"]`
         );
-        if (color && input.value.startsWith("#")) {
+        const alpha = this.shadowRoot.querySelector(
+          `[data-role='alpha'][data-key="${key}"]`
+        );
+        const alphaValue = this.shadowRoot.querySelector(
+          `[data-role='alpha-value'][data-key="${key}"]`
+        );
+        if (color) {
           color.value = colorToHex(input.value);
+        }
+        if (alpha) {
+          alpha.value = String(colorToAlpha(input.value));
+        }
+        if (alphaValue) {
+          alphaValue.textContent = `${colorToAlpha(input.value)}%`;
         }
         this._setDraftValue(key, input.value);
       });
@@ -1014,10 +1384,42 @@ class HaThemeTweakerPanel extends HTMLElement {
         const text = this.shadowRoot.querySelector(
           `[data-role='value'][data-key="${key}"]`
         );
+        const alpha = this.shadowRoot.querySelector(
+          `[data-role='alpha'][data-key="${key}"]`
+        );
+        const alphaPercent = alpha?.value ?? "100";
+        const value = colorWithAlpha(input.value, alphaPercent);
         if (text) {
-          text.value = input.value;
+          text.value = value;
         }
-        this._setDraftValue(key, input.value);
+        this._setDraftValue(key, value);
+      });
+    }
+
+    for (const input of this.shadowRoot.querySelectorAll("[data-role='alpha']")) {
+      input.addEventListener("input", () => {
+        const key = input.dataset.key;
+        const text = this.shadowRoot.querySelector(
+          `[data-role='value'][data-key="${key}"]`
+        );
+        const color = this.shadowRoot.querySelector(
+          `[data-role='color'][data-key="${key}"]`
+        );
+        const alphaValue = this.shadowRoot.querySelector(
+          `[data-role='alpha-value'][data-key="${key}"]`
+        );
+        const baseValue = text?.value || color?.value || this._draft[key];
+        const value = colorWithAlpha(baseValue, input.value);
+        if (text) {
+          text.value = value;
+        }
+        if (color) {
+          color.value = colorToHex(value);
+        }
+        if (alphaValue) {
+          alphaValue.textContent = `${input.value}%`;
+        }
+        this._setDraftValue(key, value);
       });
     }
 
@@ -1039,6 +1441,16 @@ class HaThemeTweakerPanel extends HTMLElement {
     this.shadowRoot
       .querySelector("[data-action='reset-all']")
       ?.addEventListener("click", () => this._resetAll());
+    this.shadowRoot
+      .querySelector("[data-action='open-menu']")
+      ?.addEventListener("click", () => this._openHomeAssistantMenu());
+
+    for (const element of this.shadowRoot.querySelectorAll("[data-preview-group]")) {
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this._activateSetting(element.dataset.previewGroup, element.dataset.previewKey);
+      });
+    }
   }
 }
 

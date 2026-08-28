@@ -10,6 +10,19 @@ export const WS_TYPES = {
 
 export const SETTING_GROUPS = [
   {
+    id: "scope",
+    title: "Device Scope",
+    icon: "mdi:devices",
+    settings: [
+      {
+        key: "target_device",
+        label: "Apply on",
+        type: "deviceScope",
+        placeholder: "Both",
+      },
+    ],
+  },
+  {
     id: "sidebar",
     title: "Sidebar / Menu",
     icon: "mdi:menu",
@@ -401,6 +414,12 @@ const SIDEBAR_BADGE_KEYS = [
 ];
 
 const UNSAFE_CSS_VALUE = /[{};<>]/;
+const DEVICE_SCOPE_KEY = "target_device";
+const DEVICE_SCOPES = new Set(["desktop", "mobile"]);
+const DEVICE_SCOPE_MEDIA = {
+  desktop: "(min-width: 761px)",
+  mobile: "(max-width: 760px)",
+};
 
 export function sanitizeCssValue(value) {
   if (value === undefined || value === null) {
@@ -415,13 +434,45 @@ export function sanitizeCssValue(value) {
   return normalized;
 }
 
+export function normalizeSettingValue(key, value) {
+  if (key === DEVICE_SCOPE_KEY) {
+    const scope = sanitizeCssValue(value);
+    return DEVICE_SCOPES.has(scope) ? scope : null;
+  }
+
+  return sanitizeCssValue(value);
+}
+
 export function normalizeSettings(settings = {}) {
   return Object.fromEntries(
     Object.keys(DEFAULT_SETTINGS).map((key) => [
       key,
-      sanitizeCssValue(settings[key]),
+      normalizeSettingValue(key, settings[key]),
     ])
   );
+}
+
+function deviceScope(settings) {
+  const scope = normalizeSettingValue(
+    DEVICE_SCOPE_KEY,
+    settings[DEVICE_SCOPE_KEY]
+  );
+  return scope ?? "both";
+}
+
+function wrapForDeviceScope(settings, cssText) {
+  const scope = deviceScope(settings);
+  const media = DEVICE_SCOPE_MEDIA[scope];
+  if (!media || !cssText.trim()) {
+    return cssText;
+  }
+
+  const scopedCss = cssText
+    .trimEnd()
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : ""))
+    .join("\n");
+  return `@media ${media} {\n${scopedCss}\n}\n`;
 }
 
 function hasAny(settings, keys) {
@@ -588,7 +639,7 @@ ${headerRules.join("\n")}
     );
   }
 
-  return `${css.join("\n\n")}\n`;
+  return wrapForDeviceScope(settings, `${css.join("\n\n")}\n`);
 }
 
 export function generateSidebarShadowCss(rawSettings = {}) {
@@ -628,7 +679,7 @@ ha-svg-icon + .badge {
 }`);
   }
 
-  return `${css.join("\n")}\n`;
+  return wrapForDeviceScope(settings, `${css.join("\n")}\n`);
 }
 
 export function generateHeaderShadowCss(rawSettings = {}) {
@@ -666,12 +717,12 @@ export function generateHeaderShadowCss(rawSettings = {}) {
     );
   }
 
-  return `
+  return wrapForDeviceScope(settings, `
 app-header,
 app-toolbar,
 .toolbar,
 header {
 ${rules.join("\n")}
 }
-`;
+`);
 }

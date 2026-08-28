@@ -19,6 +19,8 @@ from .const import (
 
 MAX_VALUE_LENGTH = 180
 _FORBIDDEN_CSS = re.compile(r"[{};<>]")
+_DEVICE_SCOPE_KEY = "target_device"
+_DEVICE_SCOPES = {"desktop", "mobile"}
 
 
 def _normalize_value(key: str, value: Any) -> str | None:
@@ -35,6 +37,11 @@ def _normalize_value(key: str, value: Any) -> str | None:
     normalized = value.strip()
     if normalized == "":
         return None
+
+    if key == _DEVICE_SCOPE_KEY:
+        if normalized not in _DEVICE_SCOPES:
+            raise ValueError(f"Setting {key} must be desktop, mobile, or null")
+        return normalized
 
     if len(normalized) > MAX_VALUE_LENGTH:
         raise ValueError(f"Setting {key} is too long")

@@ -6,13 +6,17 @@ HA Theme Tweaker is a custom Home Assistant integration installable with HACS. I
 
 ## Status
 
-First installable MVP:
+Installable release:
 
 - HACS-compatible repository as an `Integration`
 - admin-only `Theme Tweaker` panel in the sidebar
 - persistent storage through `.storage/ha_theme_tweaker`
 - global frontend script loaded by Home Assistant
 - CSS overrides re-injected after theme changes and navigation
+- mobile menu button for narrow Home Assistant views
+- clickable Home Assistant-style preview that jumps to the related setting
+- per-color opacity controls with `rgba(...)` output
+- device scope for applying overrides to web, mobile, or both
 - dedicated Home Assistant sidebar badge customization
 - per-setting reset and full reset
 
@@ -32,6 +36,7 @@ First installable MVP:
 
 The panel provides these categories:
 
+- `Device Scope`: apply saved overrides on web, mobile, or both
 - `Sidebar / Menu`: background, icons, text, selected item, hover state
 - `Badges`: background, text, border, radius, font size, font weight, minimum width, height
 - `General Colors`: common Home Assistant theme output variables such as `--accent-color`, `--text-accent-color`, and `--card-background-color`
@@ -39,11 +44,11 @@ The panel provides these categories:
 - `Mushroom`: optional variables, with no Mushroom Cards dependency required
 - `Header / Toolbar`: background, text, icons, accent
 
-Every empty value is saved as `null`, which means Home Assistant keeps inheriting the value from the active theme. Color pickers for mapped Home Assistant variables can show the inherited theme value as a starting point; once you save an override, more specific sections such as Sidebar, Cards, Mushroom, and Header remain applied on top.
+Every empty value is saved as `null`, which means Home Assistant keeps inheriting the value from the active theme. Color pickers for mapped Home Assistant variables can show the inherited theme value as a starting point; the opacity slider stores transparent colors as `rgba(...)`. Once you save an override, more specific sections such as Sidebar, Cards, Mushroom, and Header remain applied on top.
 
 ## Live Preview And Saving
 
-Changes are applied live in the current browser so you can preview them immediately. Click `Save` to persist the values in Home Assistant. Other open browsers receive the update through WebSocket.
+Changes are applied live in the current browser so you can preview them immediately. The preview can be clicked to jump from a Home Assistant-style element to the matching setting. Click `Save` to persist the values in Home Assistant. Other open browsers receive the update through WebSocket.
 
 The reset button on each row only clears that variable back to `null`. The `Reset all` button removes every override.
 
@@ -105,8 +110,9 @@ Data is stored like this:
 ```json
 {
   "settings": {
+    "target_device": "mobile",
     "accent_color": "#03a9f4",
-    "text_accent_color": "#ffffff",
+    "text_accent_color": "rgba(255, 255, 255, 0.82)",
     "sidebar_badge_background": "#ff3b30",
     "sidebar_badge_text": "#ffffff",
     "card_radius": "16px",
@@ -143,4 +149,4 @@ node --check custom_components/ha_theme_tweaker/frontend/panel.js
 node --check custom_components/ha_theme_tweaker/frontend/components/value-utils.js
 ```
 
-The GitHub Actions workflow also runs HACS validation with `category: integration` and only ignores the `brands` check while the project remains a custom HACS repository.
+The GitHub Actions workflow runs HACS validation with `category: integration`, official Home Assistant Hassfest validation, Python compilation, and JavaScript syntax checks.
