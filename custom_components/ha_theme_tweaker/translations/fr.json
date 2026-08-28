@@ -1,0 +1,14 @@
+{
+  "title": "HA Theme Tweaker",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer HA Theme Tweaker",
+        "description": "Ajoute le panneau Theme Tweaker et applique les surcharges CSS sauvegardées au-dessus du thème Home Assistant actif."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Theme Tweaker est déjà configuré."
+    }
+  }
+}
