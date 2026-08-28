@@ -1,106 +1,105 @@
 # HA Theme Tweaker
 
-HA Theme Tweaker est une intégration custom Home Assistant installable avec HACS. Elle ajoute un panneau de configuration et applique des surcharges CSS persistantes au-dessus du thème actif, sans créer ni modifier le fichier YAML du thème d'origine.
+HA Theme Tweaker is a custom Home Assistant integration installable with HACS. It adds an admin panel and applies persistent CSS overrides on top of the active theme, without creating or editing the original theme YAML file.
 
 ![Panel overview](docs/images/panel-overview-placeholder.svg)
 
-## Statut
+## Status
 
-Première version MVP réellement installable :
+First installable MVP:
 
-- dépôt compatible HACS en type `Integration`
-- panneau admin `Theme Tweaker` dans la sidebar
-- stockage persistant via `.storage/ha_theme_tweaker`
-- script frontend global chargé par Home Assistant
-- surcharges CSS réinjectées après changement de thème ou navigation
-- personnalisation dédiée des badges du sidebar Home Assistant
-- reset individuel et reset complet
+- HACS-compatible repository as an `Integration`
+- admin-only `Theme Tweaker` panel in the sidebar
+- persistent storage through `.storage/ha_theme_tweaker`
+- global frontend script loaded by Home Assistant
+- CSS overrides re-injected after theme changes and navigation
+- dedicated Home Assistant sidebar badge customization
+- per-setting reset and full reset
 
-## Installation Avec HACS
+## Installation With HACS
 
-1. Publier ce dossier dans le dépôt GitHub `Philiphall6/ha-theme-tweaker`.
-2. Dans Home Assistant, ouvrir HACS.
-3. Menu `...` puis `Custom repositories`.
-4. Ajouter l'URL du dépôt GitHub.
-5. Choisir le type `Integration`.
-6. Installer `HA Theme Tweaker`.
-7. Redémarrer Home Assistant.
-8. Aller dans `Paramètres > Appareils et services > Ajouter une intégration`.
-9. Chercher `HA Theme Tweaker`, puis valider.
-10. Ouvrir le panneau `Theme Tweaker` dans la sidebar.
+1. In Home Assistant, open HACS.
+2. Open the `...` menu, then select `Custom repositories`.
+3. Add `https://github.com/Philiphall6/ha-theme-tweaker`.
+4. Select the `Integration` category.
+5. Install `HA Theme Tweaker`.
+6. Restart Home Assistant.
+7. Go to `Settings > Devices & services > Add integration`.
+8. Search for `HA Theme Tweaker`, then confirm.
+9. Open the `Theme Tweaker` panel from the sidebar.
 
-## Utilisation
+## Usage
 
-Le panneau propose ces catégories :
+The panel provides these categories:
 
-- `Sidebar / Menu` : fond, icônes, texte, élément sélectionné, survol
-- `Badges` : fond, texte, bordure, rayon, taille, graisse, largeur minimum, hauteur
-- `Couleurs générales` : variables Home Assistant courantes comme `primary-color`, `accent-color`, `card-background-color`
-- `Cards` : fond, bordure, rayon, ombre, texte, icônes
-- `Mushroom` : variables optionnelles, sans dépendance à Mushroom Cards
-- `Header / Toolbar` : fond, texte, icônes, accent
+- `Sidebar / Menu`: background, icons, text, selected item, hover state
+- `Badges`: background, text, border, radius, font size, font weight, minimum width, height
+- `General Colors`: common Home Assistant variables such as `primary-color`, `accent-color`, and `card-background-color`
+- `Cards`: background, border, radius, shadow, text, icons
+- `Mushroom`: optional variables, with no Mushroom Cards dependency required
+- `Header / Toolbar`: background, text, icons, accent
 
-Chaque valeur vide est enregistrée comme `null`, ce qui signifie : conserver la valeur du thème actif.
+Every empty value is saved as `null`, which means Home Assistant keeps inheriting the value from the active theme.
 
-## Aperçu Et Sauvegarde
+## Live Preview And Saving
 
-Les changements sont appliqués en direct dans le navigateur pour prévisualisation. Cliquer sur `Sauvegarder` persiste les valeurs côté Home Assistant. Les autres navigateurs ouverts reçoivent la mise à jour via WebSocket.
+Changes are applied live in the current browser so you can preview them immediately. Click `Save` to persist the values in Home Assistant. Other open browsers receive the update through WebSocket.
 
-Le bouton de reset sur chaque ligne remet uniquement cette variable à `null`. Le bouton `Tout réinitialiser` supprime toutes les surcharges.
+The reset button on each row only clears that variable back to `null`. The `Reset all` button removes every override.
 
 ![Sidebar badges](docs/images/sidebar-badges-placeholder.svg)
 
-## Désinstallation
+## Uninstall
 
-1. Ouvrir `Theme Tweaker`.
-2. Cliquer sur `Tout réinitialiser`.
-3. Supprimer l'intégration dans `Paramètres > Appareils et services`.
-4. Désinstaller `HA Theme Tweaker` depuis HACS.
-5. Redémarrer Home Assistant ou faire un rafraîchissement complet du navigateur.
+1. Open `Theme Tweaker`.
+2. Click `Reset all`.
+3. Remove the integration from `Settings > Devices & services`.
+4. Uninstall `HA Theme Tweaker` from HACS.
+5. Restart Home Assistant or perform a full browser refresh.
 
 ## Architecture
 
 ```text
 ha-theme-tweaker/
-├── README.md
-├── LICENSE
-├── hacs.json
-├── info.md
-├── package.json
-├── .github/
-│   └── workflows/
-│       └── validate.yml
-├── custom_components/
-│   └── ha_theme_tweaker/
-│       ├── __init__.py
-│       ├── config_flow.py
-│       ├── const.py
-│       ├── manifest.json
-│       ├── storage.py
-│       ├── websocket.py
-│       ├── frontend/
-│       │   ├── ha-theme-tweaker.js
-│       │   ├── panel.js
-│       │   ├── shadow-dom.js
-│       │   ├── styles.js
-│       │   └── components/
-│       │       └── value-utils.js
-│       └── translations/
-│           ├── en.json
-│           └── fr.json
-└── docs/
-    └── images/
-        ├── panel-overview-placeholder.svg
-        └── sidebar-badges-placeholder.svg
+|-- README.md
+|-- LICENSE
+|-- hacs.json
+|-- info.md
+|-- package.json
+|-- .github/
+|   `-- workflows/
+|       `-- validate.yml
+|-- custom_components/
+|   `-- ha_theme_tweaker/
+|       |-- __init__.py
+|       |-- config_flow.py
+|       |-- const.py
+|       |-- manifest.json
+|       |-- storage.py
+|       |-- websocket.py
+|       |-- frontend/
+|       |   |-- ha-theme-tweaker.js
+|       |   |-- panel.js
+|       |   |-- shadow-dom.js
+|       |   |-- styles.js
+|       |   `-- components/
+|       |       `-- value-utils.js
+|       `-- translations/
+|           |-- en.json
+|           `-- fr.json
+`-- docs/
+    `-- images/
+        |-- panel-overview-placeholder.svg
+        `-- sidebar-badges-placeholder.svg
 ```
 
-## Détails Techniques
+## Technical Details
 
-L'intégration enregistre un chemin statique via `hass.http.async_register_static_paths`, charge `ha-theme-tweaker.js` avec `add_extra_js_url`, puis expose des commandes WebSocket pour lire, sauvegarder et réinitialiser les réglages.
+The integration registers a static path with `hass.http.async_register_static_paths`, loads `ha-theme-tweaker.js` with `add_extra_js_url`, and exposes WebSocket commands to read, save, and reset settings.
 
-Le panneau est enregistré avec `panel_custom.async_register_panel` et reste réservé aux administrateurs. La lecture des réglages reste disponible pour toutes les sessions authentifiées afin que les surcharges visuelles s'appliquent aussi aux utilisateurs non-admin.
+The panel is registered with `panel_custom.async_register_panel` and is restricted to administrators. Reading settings remains available to every authenticated session so visual overrides can also apply to non-admin users.
 
-Les données sont stockées ainsi :
+Data is stored like this:
 
 ```json
 {
@@ -115,22 +114,22 @@ Les données sont stockées ainsi :
 
 ## Shadow DOM
 
-Les variables globales Home Assistant sont appliquées par héritage CSS quand c'est possible. Les badges du menu nécessitent un traitement spécifique, car le composant `ha-sidebar` rend actuellement les compteurs dans son `shadowRoot` avec la classe `.badge`.
+Global Home Assistant variables are applied through CSS inheritance whenever possible. Sidebar badges need specific handling because the `ha-sidebar` component currently renders counters inside its `shadowRoot` with the `.badge` class.
 
-La logique fragile est isolée dans `frontend/shadow-dom.js`. Si Home Assistant renomme `.badge`, ferme le shadow root, ou change fortement `ha-sidebar`, seules les surcharges spécifiques aux badges du sidebar devront être adaptées. Les surcharges de variables CSS générales continueront à fonctionner.
+The fragile logic is isolated in `frontend/shadow-dom.js`. If Home Assistant renames `.badge`, closes the shadow root, or heavily changes `ha-sidebar`, only the sidebar badge-specific overrides should need adjustment. General CSS variable overrides will continue to work.
 
-## Compatibilité
+## Compatibility
 
-- Home Assistant `2025.7.0` ou plus récent
-- HACS `2.0.0` ou plus récent
-- navigateurs desktop modernes
-- application Android Home Assistant
-- application iOS Home Assistant
-- mode clair et mode sombre
+- Home Assistant `2025.7.0` or newer
+- HACS `2.0.0` or newer
+- modern desktop browsers
+- Home Assistant Android app
+- Home Assistant iOS app
+- light and dark modes
 
-## Développement
+## Development
 
-Vérifications locales :
+Local checks:
 
 ```bash
 python -m compileall custom_components
@@ -141,4 +140,4 @@ node --check custom_components/ha_theme_tweaker/frontend/panel.js
 node --check custom_components/ha_theme_tweaker/frontend/components/value-utils.js
 ```
 
-Le workflow GitHub Actions exécute aussi la validation HACS avec `category: integration` et ignore uniquement le contrôle `brands` tant que le projet reste un dépôt personnalisé HACS.
+The GitHub Actions workflow also runs HACS validation with `category: integration` and only ignores the `brands` check while the project remains a custom HACS repository.
