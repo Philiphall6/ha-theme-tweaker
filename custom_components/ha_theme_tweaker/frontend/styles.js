@@ -16,31 +16,31 @@ export const SETTING_GROUPS = [
     settings: [
       {
         key: "sidebar_background",
-        label: "Fond sidebar",
+        label: "Sidebar background",
         type: "color",
         placeholder: "#111827",
       },
       {
         key: "sidebar_icon_color",
-        label: "Icônes",
+        label: "Icons",
         type: "color",
         placeholder: "#9ca3af",
       },
       {
         key: "sidebar_text_color",
-        label: "Texte",
+        label: "Text",
         type: "color",
         placeholder: "#e5e7eb",
       },
       {
         key: "sidebar_selected_color",
-        label: "Élément sélectionné",
+        label: "Selected item",
         type: "color",
         placeholder: "#03a9f4",
       },
       {
         key: "sidebar_hover_color",
-        label: "Survol",
+        label: "Hover",
         type: "color",
         placeholder: "rgba(3, 169, 244, 0.16)",
       },
@@ -53,49 +53,49 @@ export const SETTING_GROUPS = [
     settings: [
       {
         key: "sidebar_badge_background",
-        label: "Fond",
+        label: "Background",
         type: "color",
         placeholder: "#ff3b30",
       },
       {
         key: "sidebar_badge_text",
-        label: "Texte",
+        label: "Text",
         type: "color",
         placeholder: "#ffffff",
       },
       {
         key: "sidebar_badge_border_color",
-        label: "Bordure",
+        label: "Border",
         type: "color",
         placeholder: "#ff817a",
       },
       {
         key: "sidebar_badge_radius",
-        label: "Rayon",
+        label: "Radius",
         type: "length",
         placeholder: "999px",
       },
       {
         key: "sidebar_badge_font_size",
-        label: "Taille du texte",
+        label: "Font size",
         type: "length",
         placeholder: "11px",
       },
       {
         key: "sidebar_badge_font_weight",
-        label: "Graisse",
+        label: "Font weight",
         type: "fontWeight",
         placeholder: "600",
       },
       {
         key: "sidebar_badge_min_width",
-        label: "Largeur min.",
+        label: "Min. width",
         type: "length",
         placeholder: "18px",
       },
       {
         key: "sidebar_badge_height",
-        label: "Hauteur",
+        label: "Height",
         type: "length",
         placeholder: "18px",
       },
@@ -103,7 +103,7 @@ export const SETTING_GROUPS = [
   },
   {
     id: "general",
-    title: "Couleurs générales",
+    title: "General Colors",
     icon: "mdi:palette",
     settings: [
       {
@@ -169,37 +169,37 @@ export const SETTING_GROUPS = [
     settings: [
       {
         key: "card_background",
-        label: "Fond",
+        label: "Background",
         type: "color",
         placeholder: "#202634",
       },
       {
         key: "card_border",
-        label: "Bordure",
+        label: "Border",
         type: "text",
         placeholder: "1px solid rgba(255,255,255,0.12)",
       },
       {
         key: "card_radius",
-        label: "Rayon",
+        label: "Radius",
         type: "length",
         placeholder: "16px",
       },
       {
         key: "card_shadow",
-        label: "Ombre",
+        label: "Shadow",
         type: "text",
         placeholder: "0 8px 28px rgba(0,0,0,0.22)",
       },
       {
         key: "card_text_color",
-        label: "Texte",
+        label: "Text",
         type: "color",
         placeholder: "#f9fafb",
       },
       {
         key: "card_icon_color",
-        label: "Icônes",
+        label: "Icons",
         type: "color",
         placeholder: "#38bdf8",
       },
@@ -212,31 +212,31 @@ export const SETTING_GROUPS = [
     settings: [
       {
         key: "mushroom_card_radius",
-        label: "Rayon des cartes",
+        label: "Card radius",
         type: "length",
         placeholder: "18px",
       },
       {
         key: "mushroom_shape_color",
-        label: "Fond des shapes",
+        label: "Shape background",
         type: "color",
         placeholder: "rgba(3,169,244,0.18)",
       },
       {
         key: "mushroom_icon_color",
-        label: "Icônes",
+        label: "Icons",
         type: "color",
         placeholder: "#03a9f4",
       },
       {
         key: "mushroom_primary_text_color",
-        label: "Texte principal",
+        label: "Primary text",
         type: "color",
         placeholder: "#f9fafb",
       },
       {
         key: "mushroom_secondary_text_color",
-        label: "Texte secondaire",
+        label: "Secondary text",
         type: "color",
         placeholder: "#cbd5e1",
       },
@@ -249,19 +249,19 @@ export const SETTING_GROUPS = [
     settings: [
       {
         key: "header_background",
-        label: "Fond",
+        label: "Background",
         type: "color",
         placeholder: "#0f172a",
       },
       {
         key: "header_text_color",
-        label: "Texte",
+        label: "Text",
         type: "color",
         placeholder: "#ffffff",
       },
       {
         key: "header_icon_color",
-        label: "Icônes",
+        label: "Icons",
         type: "color",
         placeholder: "#ffffff",
       },
