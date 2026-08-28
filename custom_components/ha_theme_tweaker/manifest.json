@@ -1,0 +1,12 @@
+{
+  "domain": "ha_theme_tweaker",
+  "name": "HA Theme Tweaker",
+  "codeowners": ["@Philiphall6"],
+  "config_flow": true,
+  "dependencies": ["frontend", "panel_custom", "websocket_api"],
+  "documentation": "https://github.com/Philiphall6/ha-theme-tweaker",
+  "integration_type": "helper",
+  "issue_tracker": "https://github.com/Philiphall6/ha-theme-tweaker/issues",
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
