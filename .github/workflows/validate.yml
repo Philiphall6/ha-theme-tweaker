@@ -1,0 +1,37 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands
+
+  syntax:
+    name: Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Compile Python
+        run: python -m compileall custom_components
+      - name: Check JavaScript
+        run: |
+          node --check custom_components/ha_theme_tweaker/frontend/styles.js
+          node --check custom_components/ha_theme_tweaker/frontend/shadow-dom.js
+          node --check custom_components/ha_theme_tweaker/frontend/ha-theme-tweaker.js
+          node --check custom_components/ha_theme_tweaker/frontend/panel.js
+          node --check custom_components/ha_theme_tweaker/frontend/components/value-utils.js
