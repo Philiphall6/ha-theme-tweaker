@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "ha_theme_tweaker"
 NAME = "HA Theme Tweaker"
-VERSION = "0.1.0"
+VERSION = "1.0.0"
 
 PANEL_URL = "ha-theme-tweaker"
 PANEL_ELEMENT = "ha-theme-tweaker-panel"
@@ -36,6 +36,7 @@ DEFAULT_SETTINGS: dict[str, str | None] = {
     "sidebar_badge_height": None,
     "primary_color": None,
     "accent_color": None,
+    "text_accent_color": None,
     "primary_background_color": None,
     "secondary_background_color": None,
     "card_background_color": None,
