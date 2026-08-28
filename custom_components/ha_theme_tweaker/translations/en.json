@@ -1,0 +1,14 @@
+{
+  "title": "HA Theme Tweaker",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HA Theme Tweaker",
+        "description": "Adds the Theme Tweaker panel and applies saved CSS overrides on top of the active Home Assistant theme."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Theme Tweaker is already configured."
+    }
+  }
+}
