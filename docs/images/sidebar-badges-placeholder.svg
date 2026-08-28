@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Sidebar badges placeholder</title>
+  <desc id="desc">Placeholder screenshot focused on Home Assistant sidebar badges.</desc>
+  <rect width="1280" height="760" fill="#f3f6fb"/>
+  <rect x="70" y="60" width="320" height="640" rx="8" fill="#111827"/>
+  <rect x="430" y="60" width="780" height="640" rx="8" fill="#ffffff" stroke="#d7dde8"/>
+  <text x="112" y="126" fill="#f8fafc" font-family="Arial, sans-serif" font-size="24" font-weight="700">Home Assistant</text>
+  <g font-family="Arial, sans-serif" font-size="18" fill="#dbeafe">
+    <text x="146" y="202">Overview</text>
+    <text x="146" y="266">Paramètres</text>
+    <text x="146" y="330">Notifications</text>
+    <text x="146" y="394">Mises à jour</text>
+  </g>
+  <g fill="#38bdf8">
+    <circle cx="112" cy="196" r="12"/>
+    <circle cx="112" cy="260" r="12"/>
+    <circle cx="112" cy="324" r="12"/>
+    <circle cx="112" cy="388" r="12"/>
+  </g>
+  <g>
+    <rect x="316" y="245" width="34" height="24" rx="12" fill="#ff3b30"/>
+    <text x="326" y="263" fill="#fff" font-family="Arial, sans-serif" font-size="14" font-weight="700">2</text>
+    <rect x="316" y="309" width="34" height="24" rx="12" fill="#ff3b30"/>
+    <text x="326" y="327" fill="#fff" font-family="Arial, sans-serif" font-size="14" font-weight="700">8</text>
+    <rect x="310" y="373" width="40" height="24" rx="12" fill="#ff3b30"/>
+    <text x="320" y="391" fill="#fff" font-family="Arial, sans-serif" font-size="14" font-weight="700">12</text>
+  </g>
+  <text x="470" y="126" fill="#0f172a" font-family="Arial, sans-serif" font-size="32" font-weight="700">Badges personnalisés</text>
+  <text x="470" y="178" fill="#475569" font-family="Arial, sans-serif" font-size="20">Fond, texte, bordure, rayon, taille, largeur et hauteur.</text>
+</svg>
