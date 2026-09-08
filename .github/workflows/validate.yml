@@ -44,3 +44,8 @@ jobs:
           node --check custom_components/ha_theme_tweaker/frontend/ha-theme-tweaker.js
           node --check custom_components/ha_theme_tweaker/frontend/panel.js
           node --check custom_components/ha_theme_tweaker/frontend/components/value-utils.js
+      - name: Browser lifecycle regression
+        run: |
+          pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium
+          python tests/browser_regression.py

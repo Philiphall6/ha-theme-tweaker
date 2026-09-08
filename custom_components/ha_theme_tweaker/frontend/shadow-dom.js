@@ -8,107 +8,108 @@ import {
 const ROOT_STYLE_ID = "ha-theme-tweaker-root-style";
 const SIDEBAR_STYLE_ID = "ha-theme-tweaker-sidebar-style";
 const HEADER_STYLE_ID = "ha-theme-tweaker-header-style";
-
+// Only cross application-shell boundaries. Lovelace cards are never inspected.
+const SHELL_SELECTOR = "home-assistant, home-assistant-main, ha-drawer, app-drawer, partial-panel-resolver, ha-panel-lovelace, hui-root, app-header-layout, ha-app-layout, ha-sidebar";
+const HEADER_HOSTS = new Set(["home-assistant", "home-assistant-main", "ha-panel-lovelace", "hui-root", "app-header-layout", "ha-app-layout"]);
 let currentSettings = normalizeSettings();
-let watcherStarted = false;
-let applyQueued = false;
+let cssCache;
+let stopWatcher;
+let applyFrame = 0;
+const observers = new Map();
 
 function upsertStyle(root, id, cssText) {
-  if (!root) {
-    return;
-  }
-
-  if (!cssText.trim()) {
-    root.getElementById?.(id)?.remove();
-    root.querySelector?.(`#${id}`)?.remove();
-    return;
-  }
-
+  if (!root) return;
   let style = root.getElementById?.(id) || root.querySelector?.(`#${id}`);
+  if (!cssText.trim()) { style?.remove(); return; }
   if (!style) {
     style = document.createElement("style");
     style.id = id;
+    style.textContent = cssText;
     root.appendChild(style);
-  }
-
-  if (style.textContent !== cssText) {
+  } else if (style.textContent !== cssText) {
     style.textContent = cssText;
   }
 }
 
-function queryDeep(selector, root = document, matches = []) {
-  if (!root.querySelectorAll) {
-    return matches;
+function shellRoots(root = document, roots = new Set()) {
+  if (roots.has(root)) return roots;
+  roots.add(root);
+  // Sidebar descendants cannot contain a header; its own root is styled below.
+  if (root.host?.localName === "ha-sidebar") return roots;
+  for (const host of root.querySelectorAll(SHELL_SELECTOR)) {
+    if (host.shadowRoot) shellRoots(host.shadowRoot, roots);
   }
-
-  matches.push(...root.querySelectorAll(selector));
-  for (const element of root.querySelectorAll("*")) {
-    if (element.shadowRoot) {
-      queryDeep(selector, element.shadowRoot, matches);
-    }
-  }
-
-  return matches;
+  return roots;
 }
 
-function injectSidebarStyles() {
-  const cssText = generateSidebarShadowCss(currentSettings);
-  for (const sidebar of queryDeep("ha-sidebar")) {
-    if (sidebar.shadowRoot) {
-      upsertStyle(sidebar.shadowRoot, SIDEBAR_STYLE_ID, cssText);
-    }
-  }
-}
-
-function injectHeaderStyles() {
-  const cssText = generateHeaderShadowCss(currentSettings);
-  const hosts = queryDeep(
-    "home-assistant, home-assistant-main, ha-panel-lovelace, hui-root, app-header-layout, ha-app-layout"
-  );
-
-  for (const host of hosts) {
-    if (host.shadowRoot) {
-      upsertStyle(host.shadowRoot, HEADER_STYLE_ID, cssText);
-    }
-  }
+function relevantMutation(records) {
+  return records.some((record) => [...record.addedNodes, ...record.removedNodes].some(
+    (node) => node.nodeType === Node.ELEMENT_NODE && node.localName !== "style"
+  ));
 }
 
 export function applyThemeTweakerStyles(settings = currentSettings) {
-  currentSettings = normalizeSettings(settings);
-  upsertStyle(document.head, ROOT_STYLE_ID, generateGlobalCss(currentSettings));
-  injectSidebarStyles();
-  injectHeaderStyles();
+  if (settings !== currentSettings || !cssCache) {
+    currentSettings = normalizeSettings(settings);
+    cssCache = {
+      global: generateGlobalCss(currentSettings),
+      sidebar: generateSidebarShadowCss(currentSettings),
+      header: generateHeaderShadowCss(currentSettings),
+    };
+  }
+  upsertStyle(document.head, ROOT_STYLE_ID, cssCache.global);
+  const roots = shellRoots();
+  for (const [root, observer] of observers) {
+    if (!roots.has(root)) { observer.disconnect(); observers.delete(root); }
+  }
+  for (const root of roots) {
+    const name = root.host?.localName;
+    if (name === "ha-sidebar") upsertStyle(root, SIDEBAR_STYLE_ID, cssCache.sidebar);
+    if (HEADER_HOSTS.has(name)) upsertStyle(root, HEADER_STYLE_ID, cssCache.header);
+    if (stopWatcher && name !== "ha-sidebar" && !observers.has(root)) {
+      const observer = new MutationObserver((records) => {
+        if (relevantMutation(records)) queueApply();
+      });
+      observer.observe(root === document ? document.documentElement : root, { childList: true, subtree: true });
+      observers.set(root, observer);
+    }
+  }
 }
 
 function queueApply() {
-  if (applyQueued) {
-    return;
-  }
-
-  applyQueued = true;
-  window.requestAnimationFrame(() => {
-    applyQueued = false;
+  if (applyFrame || document.hidden) return;
+  applyFrame = requestAnimationFrame(() => {
+    applyFrame = 0;
     applyThemeTweakerStyles();
   });
 }
 
 export function startThemeTweakerWatcher() {
-  if (watcherStarted) {
-    return;
+  if (stopWatcher) return stopWatcher;
+  const controller = new AbortController();
+  const timers = new Set();
+  const refresh = () => {
+    for (const timer of timers) clearTimeout(timer);
+    timers.clear();
+    queueApply();
+    // Bounded settling retries handle a shell attaching its shadow root after insertion.
+    for (const delay of [100, 500]) {
+      const timer = setTimeout(() => { timers.delete(timer); queueApply(); }, delay);
+      timers.add(timer);
+    }
+  };
+  stopWatcher = () => {
+    controller.abort();
+    cancelAnimationFrame(applyFrame); applyFrame = 0;
+    for (const timer of timers) clearTimeout(timer);
+    for (const observer of observers.values()) observer.disconnect();
+    observers.clear(); stopWatcher = undefined;
+  };
+  window.addEventListener("location-changed", refresh, { signal: controller.signal });
+  document.addEventListener("visibilitychange", refresh, { signal: controller.signal });
+  for (const tag of SHELL_SELECTOR.split(", ")) {
+    customElements.whenDefined(tag).then(() => { if (!controller.signal.aborted) refresh(); });
   }
-
-  watcherStarted = true;
-
-  // Home Assistant's sidebar badges live in ha-sidebar's open shadowRoot.
-  // This module is the only place that touches internal frontend DOM, making
-  // the fragile part easy to update if upstream markup changes.
-  const observer = new MutationObserver(queueApply);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
-
-  window.addEventListener("location-changed", queueApply);
-  document.addEventListener("visibilitychange", queueApply);
-  window.setInterval(queueApply, 2000);
+  refresh();
+  return stopWatcher;
 }

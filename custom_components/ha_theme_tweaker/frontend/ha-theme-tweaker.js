@@ -3,152 +3,85 @@ import { WS_TYPES } from "./styles.js";
 import { cloneSettings, extractSettings } from "./components/value-utils.js";
 
 const STATE_KEY = "__haThemeTweaker";
+const previous = window[STATE_KEY];
+previous?.stop?.();
+const controller = new AbortController();
+const state = window[STATE_KEY] = {
+  connection: null,
+  settings: cloneSettings(previous?.settings),
+  loadedConnection: null,
+  unsubscribe: null,
+};
+let retryTimer = 0;
+let retries = 0;
+let running = false;
+const stopWatcher = startThemeTweakerWatcher();
 
-const state =
-  window[STATE_KEY] ||
-  (window[STATE_KEY] = {
-    connection: null,
-    hass: null,
-    settings: cloneSettings(),
-    loadedConnection: null,
-    loading: false,
-    unsubscribe: null,
-    themeFingerprint: "",
-  });
-
-function findHass(root = document) {
-  const selectors = [
-    "home-assistant",
-    "home-assistant-main",
-    "ha-panel-lovelace",
-    "hui-root",
-  ];
-
-  for (const selector of selectors) {
-    const element = root.querySelector?.(selector);
-    if (element?.hass) {
-      return element.hass;
-    }
-    if (element?.shadowRoot) {
-      const hass = findHass(element.shadowRoot);
-      if (hass) {
-        return hass;
-      }
-    }
-  }
-
-  for (const element of root.querySelectorAll?.("*") ?? []) {
-    if (element.hass) {
-      return element.hass;
-    }
-    if (element.shadowRoot) {
-      const hass = findHass(element.shadowRoot);
-      if (hass) {
-        return hass;
-      }
-    }
-  }
-
-  return null;
-}
-
-function themeFingerprint(hass) {
-  const themes = hass?.themes ?? {};
-  return JSON.stringify({
-    theme: themes.theme ?? themes.active_theme ?? "",
-    dark: themes.darkMode ?? themes.dark_mode ?? "",
-    defaultTheme: themes.default_theme ?? "",
-  });
-}
-
-function publishSettings(settings) {
+function publishSettings(response) {
+  const settings = extractSettings(response);
+  if (!settings || controller.signal.aborted) return;
   state.settings = cloneSettings(settings);
   applyThemeTweakerStyles(state.settings);
-  window.dispatchEvent(
-    new CustomEvent("ha-theme-tweaker-settings-updated", {
-      detail: { settings: state.settings },
-    })
-  );
+  window.dispatchEvent(new CustomEvent("ha-theme-tweaker-settings-updated", {
+    detail: { settings: state.settings },
+  }));
 }
 
-async function loadSettings(hass) {
-  if (!hass?.connection?.sendMessagePromise) {
-    return;
+async function tick() {
+  if (running || controller.signal.aborted) return;
+  clearTimeout(retryTimer);
+  const connection = document.querySelector("home-assistant")?.hass?.connection;
+  if (!connection?.sendMessagePromise) { scheduleRetry(); return; }
+  if (state.connection !== connection) {
+    state.connection?.removeEventListener?.("ready", refresh);
+    state.unsubscribe?.(); state.unsubscribe = null;
+    state.loadedConnection = null;
+    state.connection = connection;
+    connection.addEventListener?.("ready", refresh);
   }
-  if (state.loading || state.loadedConnection === hass.connection) {
-    return;
-  }
-
-  state.loading = true;
+  running = true;
   try {
-    const response = await hass.connection.sendMessagePromise({
-      type: WS_TYPES.getSettings,
-    });
-    const settings = extractSettings(response);
-    if (settings) {
-      publishSettings(settings);
+    if (state.loadedConnection !== connection) {
+      const response = await connection.sendMessagePromise({ type: WS_TYPES.getSettings });
+      if (controller.signal.aborted) return;
+      publishSettings(response);
+      state.loadedConnection = connection;
     }
-    state.loadedConnection = hass.connection;
+    if (!state.unsubscribe && connection.subscribeMessage) {
+      const unsubscribe = await connection.subscribeMessage(publishSettings, { type: WS_TYPES.subscribe });
+      if (controller.signal.aborted || state.connection !== connection) unsubscribe();
+      else state.unsubscribe = unsubscribe;
+    }
+    retries = 0;
   } catch (err) {
-    console.warn("HA Theme Tweaker could not load settings", err);
+    console.warn("HA Theme Tweaker could not synchronize settings", err);
+    scheduleRetry();
   } finally {
-    state.loading = false;
+    running = false;
   }
 }
 
-async function subscribeUpdates(hass) {
-  if (!hass?.connection || state.connection === hass.connection) {
-    return;
-  }
-
-  if (state.unsubscribe) {
-    state.unsubscribe();
-    state.unsubscribe = null;
-  }
-
-  state.connection = hass.connection;
-  state.loadedConnection = null;
-
-  if (!hass.connection.subscribeMessage) {
-    return;
-  }
-
-  try {
-    state.unsubscribe = await hass.connection.subscribeMessage((message) => {
-      const settings = extractSettings(message);
-      if (settings) {
-        publishSettings(settings);
-      }
-    }, { type: WS_TYPES.subscribe });
-  } catch (err) {
-    console.warn("HA Theme Tweaker could not subscribe to updates", err);
-  }
+function scheduleRetry() {
+  if (controller.signal.aborted || retries >= 8) return;
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(tick, Math.min(250 * 2 ** retries++, 5000));
 }
 
-function tick() {
-  const hass = findHass();
-  if (!hass) {
-    return;
-  }
-
-  state.hass = hass;
-  const nextFingerprint = themeFingerprint(hass);
-  if (nextFingerprint !== state.themeFingerprint) {
-    state.themeFingerprint = nextFingerprint;
-    applyThemeTweakerStyles(state.settings);
-  }
-
-  loadSettings(hass);
-  subscribeUpdates(hass);
+function refresh() {
+  retries = 0;
+  if (!document.hidden) tick();
 }
 
+state.stop = () => {
+  controller.abort(); clearTimeout(retryTimer);
+  state.connection?.removeEventListener?.("ready", refresh);
+  state.unsubscribe?.(); state.unsubscribe = null;
+  stopWatcher();
+};
 window.addEventListener("ha-theme-tweaker-preview", (event) => {
-  if (event.detail?.settings) {
-    applyThemeTweakerStyles(event.detail.settings);
-  }
-});
-
-startThemeTweakerWatcher();
+  if (event.detail?.settings) applyThemeTweakerStyles(event.detail.settings);
+}, { signal: controller.signal });
+window.addEventListener("location-changed", refresh, { signal: controller.signal });
+document.addEventListener("visibilitychange", refresh, { signal: controller.signal });
 applyThemeTweakerStyles(state.settings);
-window.setInterval(tick, 1200);
 queueMicrotask(tick);
