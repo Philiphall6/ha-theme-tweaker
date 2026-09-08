@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "ha_theme_tweaker"
 NAME = "HA Theme Tweaker"
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 PANEL_URL = "ha-theme-tweaker"
 PANEL_ELEMENT = "ha-theme-tweaker-panel"
