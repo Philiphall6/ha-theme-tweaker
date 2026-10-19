@@ -2,6 +2,9 @@
 
 By [Philiphall6](https://github.com/Philiphall6).
 
+[![HACS Default](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/default)
+[![GitHub Release](https://img.shields.io/github/v/release/Philiphall6/ha-theme-tweaker)](https://github.com/Philiphall6/ha-theme-tweaker/releases/latest)
+
 HA Theme Tweaker is a custom Home Assistant integration installable with HACS. It adds an admin panel and applies persistent CSS overrides on top of the active theme, without creating or editing the original theme YAML file.
 
 ![HA Theme Tweaker panel in Home Assistant](docs/images/ha-theme-tweaker-panel.svg)
