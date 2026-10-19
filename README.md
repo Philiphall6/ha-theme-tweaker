@@ -22,15 +22,16 @@ Installable release:
 
 ## Installation With HACS
 
-1. In Home Assistant, open HACS.
-2. Open the `...` menu, then select `Custom repositories`.
-3. Add `https://github.com/Philiphall6/ha-theme-tweaker`.
-4. Select the `Integration` category.
-5. Install `HA Theme Tweaker`.
-6. Restart Home Assistant.
-7. Go to `Settings > Devices & services > Add integration`.
-8. Search for `HA Theme Tweaker`, then confirm.
-9. Open the `Theme Tweaker` panel from the sidebar.
+HA Theme Tweaker is available directly in the HACS default catalog.
+
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Philiphall6&repository=ha-theme-tweaker&category=integration)
+
+1. Open **HACS** in Home Assistant and search for **HA Theme Tweaker**, or use the button above.
+2. Download **HA Theme Tweaker**.
+3. Restart Home Assistant.
+4. Go to `Settings > Devices & services > Add integration`.
+5. Search for `HA Theme Tweaker`, then confirm.
+6. Open the `Theme Tweaker` panel from the sidebar.
 
 ## Usage
 
